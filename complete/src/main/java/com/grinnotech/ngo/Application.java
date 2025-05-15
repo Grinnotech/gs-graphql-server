@@ -1,13 +1,13 @@
-package com.example.graphqlserver;
+package com.grinnotech.ngo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class GraphqlServerApplication {
+public class Application {
 
 	public static void main(String[] args) {
-		SpringApplication.run(GraphqlServerApplication.class, args);
+		SpringApplication.run(Application.class, args);
 	}
 
 }

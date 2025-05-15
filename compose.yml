@@ -1,0 +1,136 @@
+volumes:
+  postgres_data:
+    driver: local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/main/docker/postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_DB: ngo-patients
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5452:5432"
+  #    command: [ "postgres", "-c", "log_statement=all" ]
+
+  keycloak:
+#    build:
+#      context: ./src/main/docker/keycloak
+    image: registry.gitlab.com/sjacek/prebuild_keycloak:26.0
+    restart: unless-stopped
+    command: start --optimized --import-realm
+#    command: export --dir /opt/keycloak/data/import --realm ngo-patients --users different_files --users-per-file 100
+
+    healthcheck:
+      test: curl -f http://keyclaok:8180/health/ready
+#      test: ["CMD-SHELL", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+    environment:
+#      PROXY_ADDRESS_FORWARDING: "true"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: superSecret
+      KC_HOSTNAME: localhost
+      KC_HTTPS_PORT: 8543
+
+#      KC_HOSTNAME_STRICT: false
+#      KC_HOSTNAME_STRICT_BACKCHANNEL: false
+      KC_HTTP_ENABLED: true
+      KC_HTTP_HOST: keycloak
+      KC_HTTP_PORT: 8180
+      #      KC_HTTP_RELATIVE_PATH: /auth
+#      KC_PROXY: edge
+      KC_DB_URL: 'jdbc:postgresql://postgres/ngo-patients'
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_DB_SCHEMA: keycloak
+      #      KC_DB_URL_PROPERTIES: "verifyServerCertificate=false&ssl=allow"
+      KEYCLOAK_STATISTICS: db,http,jgroups
+
+    volumes:
+      - ./src/main/docker/keycloak/realms:/opt/keycloak/data/import
+      - ./src/main/docker/keycloak/themes/patient-registry:/opt/keycloak/themes/patient-registry
+      - ./log/keycloak:/log
+    ports:
+      - "8180:8180"
+      - "8543:8543"
+    #      - "9190:9990"
+    depends_on:
+      postgres:
+        condition: service_started
+
+  ngo-patients-svc:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    image: registry.gitlab.com/ngo-patients/ngo-patients-svc:${BACKEND_TAG:-jvm}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 5s
+      timeout: 2s
+      retries: 15
+    environment:
+      JAVA_OPTS: "-Djava.security.egd=file:/dev/./urandom"
+
+      DB_VENDOR: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ngo-patients
+      #      DB_SCHEMA: patient-registry
+      DB_USER: ngo-patients
+      DB_PASSWORD: ngo-patients
+
+      OIDC_SERVER: ${BACKEND_OIDC_SERVER:-http://keycloak:8180}
+#      OIDC_HOST: keycloak
+#      OIDC_PORT: 8180
+      OIDC_TOKEN_ISSUER_SERVER: ${BACKEND_OIDC_TOKEN_ISSUER_SERVER:-localhost:8180}
+#      HTTP_CORS_ORIGINS: ${BACKEND_HTTP_CORS_ORIGINS:-http://localhost:8085}
+      #      OIDC_SECRET: 535223cb-1ab4-4297-b7d3-76b0dc1de6a4
+      HTTP_ACCESS_LOG: "true"
+      #      LOG_SQL: false
+      LOG_FILE_PATH: /log/backend.log
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./log/backend:/log
+    #    networks:
+    #      net:
+    #        ipv4_address: 179.179.0.
+    links:
+      - keycloak
+    depends_on:
+      postgres:
+        condition: service_started
+      keycloak:
+        condition: service_started
+
+#  frontend:
+#    image: registry.jackinia.noip.me/projekty/patients/passport/frontend:${FRONTEND_TAG:-latest}
+#    restart: unless-stopped
+#    healthcheck:
+#      test: ["CMD", "service", "nginx", "status"]
+#      interval: 1m
+#      timeout: 5s
+#      retries: 3
+#    environment:
+#      KEYCLOAK_ISSUER_URL: ${FRONTEND_KEYCLOAK_ISSUER_URL:-http://localhost:8180/auth/}
+#      REGISTRY_API_URL: ${FRONTEND_REGISTRY_API_URL:-http://localhost:8082}
+#    ports:
+#      - "8085:80"
+#    depends_on:
+#      backend:
+#        condition: service_started
+#      keycloak:
+#        condition: service_started

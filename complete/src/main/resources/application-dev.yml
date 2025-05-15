@@ -1,0 +1,33 @@
+spring:
+  #  security:
+  #    user:
+  #      name: user
+  #      password: ${USER_PASSWORD:password}
+
+  docker:
+    compose:
+      file: compose-dev.yml
+      enabled: true
+
+  flyway:
+    locations: classpath:db/migration,classpath:db/migration-dev
+
+  graphql:
+    graphiql:
+      enabled: true
+#      path: /graphiql
+#    websocket:
+#      path: /graphql
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    web: DEBUG
+    WebClient: DEBUG
+    WebClientExchangeFilterFunction: DEBUG
+    graphql.servlet: DEBUG
+    graphql.execution.instrumentation.parameters: DEBUG
+    graphql.execution.instrumentation.parameters.DefaultInstrumentationParameters: DEBUG
+    graphql.execution.instrumentation.parameters.DefaultInstrumentationParameters$1: DEBUG
+

@@ -1,4 +1,4 @@
-package com.example.graphqlserver;
+package com.grinnotech.ngo.example;
 
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;

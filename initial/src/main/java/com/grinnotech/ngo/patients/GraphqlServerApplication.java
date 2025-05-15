@@ -1,4 +1,4 @@
-package com.example.graphqlserver;
+package com.grinnotech.ngo.patients;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

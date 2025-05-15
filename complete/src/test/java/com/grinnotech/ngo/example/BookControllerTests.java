@@ -1,4 +1,4 @@
-package com.example.graphqlserver;
+package com.grinnotech.ngo.example;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
